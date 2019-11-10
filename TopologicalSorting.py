@@ -92,3 +92,69 @@ class Solution3:
                     ready.append(c1)
 
         return res if len(res) == numCourses else []
+
+
+# https://leetcode.com/problems/sort-items-by-groups-respecting-dependencies/
+# this problem is solved by two-step topological sorting
+
+class Solution4:
+    def sortItems(self, n: int, m: int, group: List[int], beforeItems: List[List[int]]) -> List[int]:
+        from collections import defaultdict
+
+        # topological sorting for groups
+        gpre, gsuc = defaultdict(set), defaultdict(set)
+        for i, before in enumerate(beforeItems):
+            for j in before:
+                if group[i] == -1: #### assign group id for sorting if the order of the item matters
+                    group[i] = m
+                    m += 1
+                if group[j] == -1:
+                    group[j] = m
+                    m += 1
+                if group[i] == group[j]: #### don't forget this check!!!
+                    continue
+                gpre[group[i]].add(group[j])
+                gsuc[group[j]].add(group[i])
+
+        gStack = set([g for g in range(m) if g not in gpre])
+        gSort = []
+        while gStack:
+            g0 = gStack.pop()
+            gSort.append(g0)
+            for g1 in gsuc[g0]:
+                gpre[g1].remove(g0)
+                if len(gpre[g1]) == 0:
+                    gStack.add(g1)
+        if len(gSort) < m:
+            return []
+
+
+
+        # topological sorting for items:
+        pre, suc = defaultdict(set), defaultdict(set)
+        for i, before in enumerate(beforeItems):
+            pre[i] |= set(before)
+            for j in before:
+                suc[j].add(i)
+
+        ### for the sake of time complexity
+        gMap = defaultdict(set)
+        for i in range(len(group)):
+            if group[i] != -1:
+                gMap[group[i]].add(i)
+
+        res = [i for i in range(len(group)) if group[i] == -1] # first append items whose order doesn't matter
+        for gId in gSort:
+            ready = set([i for i in gMap[gId] if len(pre[i]) == 0])
+            new = []
+            while ready:
+                i = ready.pop()
+                new.append(i)
+                for j in suc[i]:
+                    pre[j].remove(i)
+                    if len(pre[j]) == 0 and group[j] == gId:
+                        ready.add(j)
+            if len(new) < len(gMap[gId]):
+                return []
+            res.extend(new)
+        return res
